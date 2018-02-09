@@ -39,6 +39,7 @@ def ptyRender(kwargs=None):
             kwargs['prices']['DASH'] = kwargs['prices']['DASH'].quantize(Decimal(0.001))
     except Exception as e:
         print(e)
+    print(kwargs)
     return json.dumps(kwargs)
 
 def getAssets(commodity, address):
@@ -93,8 +94,8 @@ def mkdirp(path):
 def identity(username=None):
     if (username):
         depAddys = getAddresses(username)
-        return ptyRender('identity.html', {'username':username, 'depositAddresses':depAddys})
-    return ptyRender('identify.html')
+        return ptyRender({'username':username, 'depositAddresses':depAddys})
+    return ptyRender()
 
 @app.route('/address/generate/<commodity>/<username>')
 def genaddress(commodity, username):
@@ -116,10 +117,6 @@ def genaddress(commodity, username):
         f.close()
     # TODO return json encoded address and price.
     return redirect(url_for('identity', username=username))
-
-@app.route('/address/<address>')
-def address(address):
-    return ptyRender('address.html', {'address': address})
 
 if __name__ == '__main__':
     app.run()
