@@ -1,7 +1,7 @@
-# TigoCTM
+# PTYGlass REST Payment API
 
 ### Version
-2.0.0
+1.0.0
 
 ### Installation
 
@@ -12,7 +12,7 @@ Open your favorite Terminal and run these commands:
 
 ```sh
 $ export FLASK_APP=app.py
-$ flask run
+$ flask run --port=5001
 ```
 
-Open a web browser and navigate to: `http://localhost:5000`.
+Open a web browser and navigate to: `http://localhost:5001`.
