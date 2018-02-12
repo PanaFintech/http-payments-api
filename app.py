@@ -34,8 +34,8 @@ def ptyRender(kwargs=None):
         if (grep and len(grep) > 1):
             kwargs['prices'] = {
                 'BTC': Decimal(re.search('BTC \$[ 0-9.]*', grep).group(0).replace('BTC', '').replace('$', '').replace(' ', '')),
-                'DASH': Decimal(re.search('DASH \$[ 0-9.]*', grep).group(0).replace('DASH', '').replace('$', '').replace(' ', ''))
-                'guld': Decimal(re.search('guld \$[ 0-9.]*', grep).group(0).replace('DASH', '').replace('$', '').replace(' ', ''))
+                'DASH': Decimal(re.search('DASH \$[ 0-9.]*', grep).group(0).replace('DASH', '').replace('$', '').replace(' ', '')),
+                'guld': Decimal(re.search('guld \$[ 0-9.]*', grep).group(0).replace('guld', '').replace('$', '').replace(' ', ''))
             }
             kwargs['prices']['BTC'] = kwargs['prices']['BTC'].quantize(Decimal(0.001))
             kwargs['prices']['DASH'] = kwargs['prices']['DASH'].quantize(Decimal(0.001))
