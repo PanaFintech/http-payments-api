@@ -8,6 +8,7 @@ import subprocess
 import re
 import random
 from decimal import Decimal
+from validate_email import validate_email
 
 configParser = ConfigParser.RawConfigParser()
 configFilePath = './config.ini'
@@ -22,24 +23,28 @@ else:
 def ptyRender(kwargs=None):
     if kwargs is None:
         kwargs = {}
-    kwargs['prices'] = {'BTC': 0, 'DASH': 0}
+    kwargs['prices'] = {'BTC': 0, 'DASH': 0, 'guld': 50}
     search = "P"
     try:
         grep = subprocess.check_output([
             'grep',
-            '-r',
+            '-rI',
             search, '%sledger/prices/' % TIGO_HOME
         ])
         if (grep and len(grep) > 1):
             kwargs['prices'] = {
-                'BTC': Decimal(re.search('\$ .[ 0-9.]*BTC', grep).group(0).replace('BTC', '').replace('$', '').replace(' ', '')),
-                'DASH': Decimal(re.search('\$ .[ 0-9.]*DASH', grep).group(0).replace('DASH', '').replace('$', '').replace(' ', ''))
+                'BTC': Decimal(re.search('BTC \$[ 0-9.]*', grep).group(0).replace('BTC', '').replace('$', '').replace(' ', '')),
+                'DASH': Decimal(re.search('DASH \$[ 0-9.]*', grep).group(0).replace('DASH', '').replace('$', '').replace(' ', ''))
+                'guld': Decimal(re.search('guld \$[ 0-9.]*', grep).group(0).replace('DASH', '').replace('$', '').replace(' ', ''))
             }
             kwargs['prices']['BTC'] = kwargs['prices']['BTC'].quantize(Decimal(0.001))
             kwargs['prices']['DASH'] = kwargs['prices']['DASH'].quantize(Decimal(0.001))
+            kwargs['prices']['guld'] = kwargs['prices']['guld'].quantize(Decimal(0.001))
     except Exception as e:
         print(e)
-    print(kwargs)
+    kwargs['prices']['BTC'] = str(kwargs['prices']['BTC'])
+    kwargs['prices']['DASH'] = str(kwargs['prices']['DASH'])
+    kwargs['prices']['guld'] = str(kwargs['prices']['guld'])
     return json.dumps(kwargs)
 
 def getAssets(commodity, address):
@@ -79,6 +84,9 @@ def getAddresses(username):
             addys[line[0]]['sub-total'] = addys[line[0]]['sub-total'] + assets
         else:
             addys[line[0]] = {line[1]: assets, 'sub-total': assets}
+    for c in addys:
+        for a in addys[c]:
+            addys[c][a] = str(addys[c][a])
     return addys
 
 def mkdirp(path):
@@ -90,15 +98,58 @@ def mkdirp(path):
         else:
             raise
 
-@app.route('/id/<username>')
+@app.route('/api/register',  methods = ['POST'])
+def register():
+    """
+    Register a new user with a public name and private contact info.
+    Generate a payment address, if crypto currency is specified.
+    Finally redirect to /api/id to return the user's info.
+    Use POST form data for this method.
+
+    :param username: The user's public name.
+    :param commodity: Commodity to pay in.
+    :param email: The user's email address for tickets and important information.
+    :param fullname: The user's private, used for matching tickets at the door.
+    """
+    # TODO check if user exists and do not overwrite
+    mkdirp('%speople/%s/' % (TIGO_HOME, username))
+    username = request.form['username']
+    commodity = request.form['commodity']
+    # TODO encrypt and store contact info, then email
+    email = request.form['email']
+    fullname = request.form['fullname']
+    if commodity in ['BTC', 'DASH', 'guld']:
+        return genaddress(commodity, username)
+    else:
+        return redirect(url_for('identity', username=username))
+
+@app.route('/api/id/<username>')
 def identity(username=None):
+    """
+    Show all info a user would need to make a deposit. i.e. price and addresses
+    Response is json formatted dict.
+    Use the path to specify the parameters for this method.
+
+    :param username: The user's public name.
+    """
     if (username):
         depAddys = getAddresses(username)
         return ptyRender({'username':username, 'depositAddresses':depAddys})
     return ptyRender()
 
-@app.route('/address/generate/<commodity>/<username>')
+@app.route('/api/address/generate/<commodity>/<username>')
 def genaddress(commodity, username):
+    """
+    Generate a payment address for the given user and commodity.
+    Use the path to specify the parameters for this method.
+
+    :param username: The user's public name.
+    :param commodity: Commodity to pay in.
+    """
+    try:
+        assert commodity in ['BTC', 'DASH', 'guld']
+    except AssertionError as ae:
+        return json.dumps({'error': True, 'message': 'invalid commodity'})
     addys = getAddresses(username)
     if commodity not in addys or len(addys[commodity]) < 3:
         imp = subprocess.check_output([
@@ -115,8 +166,8 @@ def genaddress(commodity, username):
         f = open('%sledger/%s/%s/included.dat' % (TIGO_HOME, commodity, found), 'w')
         f.write(';ptyglass:%s' % username)
         f.close()
-    # TODO return json encoded address and price.
     return redirect(url_for('identity', username=username))
+
 
 if __name__ == '__main__':
     app.run()
