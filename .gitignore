@@ -1,2 +1,5 @@
 app.pyc
 venv
+supervisord.log
+supervisord.pid
+logs
